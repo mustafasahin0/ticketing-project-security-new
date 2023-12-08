@@ -25,7 +25,7 @@ public class SecurityConfig {
         userList.add(
                 new User("mike", passwordEncoder.encode("password"), Arrays.asList(new SimpleGrantedAuthority("ROLE_ADMIN"))));
         userList.add(
-                new User("mike", passwordEncoder.encode("password"), Arrays.asList(new SimpleGrantedAuthority("ROLE_MANAGER"))));
+                new User("ozzy", passwordEncoder.encode("password"), Arrays.asList(new SimpleGrantedAuthority("ROLE_MANAGER"))));
 
 
         return new InMemoryUserDetailsManager(userList);
