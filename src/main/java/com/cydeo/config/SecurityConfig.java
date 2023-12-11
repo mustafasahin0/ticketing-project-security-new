@@ -12,6 +12,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 import java.net.http.HttpClient;
 import java.util.ArrayList;
@@ -65,20 +66,19 @@ public class SecurityConfig {
                 .and()
 //                .httpBasic()
                 .formLogin()
-                .loginPage("/login")
-//                    .defaultSuccessUrl("/welcome")
-//                .successHandler(authSuccessHandler)
-                .failureUrl("/login?error=true")
-                .permitAll()
+                    .loginPage("/login")
+                    .defaultSuccessUrl("/welcome")
+                    .failureUrl("/login?error=true")
+                    .permitAll()
                 .and()
                 .logout()
-//                .logoutRequestMatcher(new AntPathRequestMatcher("/logout"))
-                .logoutSuccessUrl("/login")
+                    .logoutRequestMatcher(new AntPathRequestMatcher("/logout"))
+                    .logoutSuccessUrl("/login")
                 .and()
                 .rememberMe()
-                .tokenValiditySeconds(120)
-                .key("cydeo")
-                .userDetailsService(securityService)
+                    .tokenValiditySeconds(120)
+                    .key("example")
+                    .userDetailsService(securityService)
                 .and().build();
 
     }
