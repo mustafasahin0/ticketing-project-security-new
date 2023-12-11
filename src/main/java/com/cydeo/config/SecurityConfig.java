@@ -1,5 +1,6 @@
 package com.cydeo.config;
 
+import com.cydeo.service.SecurityService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -10,6 +11,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 
 import java.net.http.HttpClient;
 import java.util.ArrayList;
@@ -19,49 +21,66 @@ import java.util.List;
 @Configuration
 public class SecurityConfig {
 
+    private final SecurityService securityService;
 
-    @Bean
-    public UserDetailsService userDetailsService(PasswordEncoder passwordEncoder) {
-
-        List<UserDetails> userList = new ArrayList<>();
-
-        userList.add(
-                new User("mike", passwordEncoder.encode("password"), Arrays.asList(new SimpleGrantedAuthority("ROLE_ADMIN"))));
-        userList.add(
-                new User("ozzy", passwordEncoder.encode("password"), Arrays.asList(new SimpleGrantedAuthority("ROLE_MANAGER"))));
-
-
-        return new InMemoryUserDetailsManager(userList);
+    public SecurityConfig(SecurityService securityService) {
+        this.securityService = securityService;
     }
 
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity httpSecurity) throws Exception {
+    //    @Bean
+//    public UserDetailsService userDetailsService(PasswordEncoder passwordEncoder) {
+//
+//        List<UserDetails> userList = new ArrayList<>();
+//
+//        userList.add(
+//                new User("mike", passwordEncoder.encode("password"), Arrays.asList(new SimpleGrantedAuthority("ROLE_ADMIN"))));
+//        userList.add(
+//                new User("ozzy", passwordEncoder.encode("password"), Arrays.asList(new SimpleGrantedAuthority("ROLE_MANAGER"))));
+//
+//
+//        return new InMemoryUserDetailsManager(userList);
+//    }
 
-        return httpSecurity
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
+        return http
                 .authorizeRequests()
-                .antMatchers("/user/**").hasRole("ADMIN") // ROLE_ADMIN
-                .antMatchers("/project/**").hasRole("MANAGER")
-                .antMatchers("/task/employee/**").hasRole("EMPLOYEE")
-                .antMatchers("/task/**").hasRole("MANAGER")
-//                .antMatchers("/task/**").hasAnyRole("EMPLOYEE", "ADMIN")
+//                .antMatchers("/user/**").hasRole("Admin")
+                .antMatchers("/user/**").hasAuthority("Admin")
+                .antMatchers("/project/**").hasAuthority("Manager")
+                .antMatchers("/task/employee/**").hasAuthority("Employee")
+                .antMatchers("/task/**").hasAuthority("Manager")
+//                .antMatchers("/task/**").hasAnyRole("EMPLOYEE","ADMIN")
 //                .antMatchers("task/**").hasAuthority("ROLE_EMPLOYEE")
+
                 .antMatchers(
                         "/",
                         "/login",
                         "/fragments/**",
-                        "assets/**",
+                        "/assets/**",
                         "/images/**"
-
                 ).permitAll()
                 .anyRequest().authenticated()
                 .and()
 //                .httpBasic()
                 .formLogin()
                 .loginPage("/login")
-                .defaultSuccessUrl("/welcome")
+//                    .defaultSuccessUrl("/welcome")
+//                .successHandler(authSuccessHandler)
                 .failureUrl("/login?error=true")
                 .permitAll()
+                .and()
+                .logout()
+//                .logoutRequestMatcher(new AntPathRequestMatcher("/logout"))
+                .logoutSuccessUrl("/login")
+                .and()
+                .rememberMe()
+                .tokenValiditySeconds(120)
+                .key("cydeo")
+                .userDetailsService(securityService)
                 .and().build();
+
     }
 
 }
