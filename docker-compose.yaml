@@ -1,4 +1,3 @@
-version: "3.7"
 services:
   mypostgres:
     image: postgres
@@ -12,8 +11,17 @@ services:
     restart: always
     volumes:
       - initdb:/var/lib/postgresql/data
-
-networks:
-
+  ticketing-app:
+    build: .
+    container_name: ticketing-app
+    ports:
+      - "8080:8080"
+#    networks:
+#      -webnet:
+    depends_on:
+      - mypostgres
+#networks:
+#  webnet:
+#    driver: bridge
 volumes:
-  initbd:
+  initdb:
