@@ -1,40 +1,56 @@
-# This config was automatically generated from your source code
-# Stacks detected: deps:java:.
-version: 2.1
+version: 2
 jobs:
-  test-java:
+  build:
     docker:
-      - image: cimg/openjdk:17.0
+      # specify the version you desire here
+      - image: circleci/openjdk:11-jdk
+    working_directory: /tmp/workspace
     steps:
       - checkout
-      - run:
-          name: Calculate cache key
-          command: |-
-            find . -name 'pom.xml' -o -name 'gradlew*' -o -name '*.gradle*' | \
-                    sort | xargs cat > /tmp/CIRCLECI_CACHE_KEY
+      - run: mkdir -p /tmp/workspace
+      # Download and cache dependencies
       - restore_cache:
-          key: cache-{{ checksum "/tmp/CIRCLECI_CACHE_KEY" }}
-      - run:
-          command: mvn verify
-      - store_test_results:
-          path: target/surefire-reports
+          keys:
+            - v1-dependencies-{{ checksum "pom.xml" }}
+            # fallback to using the latest cache if no exact match is found
+            - v1-dependencies-
+
+      - run: mvn clean install -DskipTests
       - save_cache:
-          key: cache-{{ checksum "/tmp/CIRCLECI_CACHE_KEY" }}
           paths:
-            - ~/.m2/repository
-  deploy:
-    # This is an example deploy job, not actually used by the workflow
-    docker:
-      - image: cimg/base:stable
+            - ~/.m2
+          key: v1-dependencies-{{ checksum "pom.xml" }}
+      - persist_to_workspace:
+          root: /tmp/workspace
+          paths: .
+  docker-image-and-publish:
+    machine: true
     steps:
-      # Replace this with steps to deploy to users
+      - attach_workspace:
+          at: /tmp/workspace
+      - run: ls -a /tmp/workspace
       - run:
-          name: deploy
-          command: '#e.g. ./deploy.sh'
+          name: Create Docker image and push to ECR
+          command: aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin 269733570982.dkr.ecr.eu-west-2.amazonaws.com && docker build -t ticketingapp /tmp/workspace && docker tag ticketingapp:latest 269733570982.dkr.ecr.eu-west-2.amazonaws.com/ticketingapp:latest && docker push 269733570982.dkr.ecr.eu-west-2.amazonaws.com/ticketingapp:latest
+  deploy-job:
+    docker:
+      #specify the version you desire here
+      - image: circleci/node:10.0.0
+    steps:
+      - run:
+          name: Execute Deployment Script
+          command: |
+            ssh -o "StrictHostKeyChecking=no" ec2-user@ec2-3-8-95-70.eu-west-2.compute.amazonaws.com <<'ENDSSH'
+            /bin/bash bin/deploy_image.sh
+            docker ps
 workflows:
-  build-and-test:
+  version: 2
+  build_and_test:
     jobs:
-      - test-java
-    # - deploy:
-    #     requires:
-    #       - test-java
+      - build
+      - docker-image-and-publish:
+          requires:
+            - build
+      - deploy-job:
+          requires:
+            - docker-image-and-publish
